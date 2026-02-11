@@ -1,0 +1,15 @@
+{
+  "collected_at": "2026-01-06T12:00:00-05:00",
+  "device_name": "DESKTOP-123",
+  "username": "DOMAIN\\user",
+  "serial_number": "ABC123XYZ",
+  "os_caption": "Microsoft Windows 11 Enterprise",
+  "os_version": "10.0.22631",
+  "os_build": "22631",
+  "last_boot_time": "2026-01-05T08:12:00-05:00",
+  "last_update_installed_date": "2025-12-20",
+  "pending_reboot": false,
+  "defender_realtime_protection": "On",
+  "bitlocker_enabled": true,
+  "system_drive_free_percent": 32
+}

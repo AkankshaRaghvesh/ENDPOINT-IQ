@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+# Ignore your specific local scan results for privacy
+endpoint_health_final.json
+endpoint_health.json
+endpoint_health_scored.json

@@ -1,0 +1,545 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Endpoint Health Dashboard</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    
+    body {
+  font-family: Optima, "Optima LT Std", "Segoe UI", Arial, sans-serif;
+  margin: 24px;
+  background: #081849;          /* Lapis night */
+  color: #081849;
+}
+
+    .header { display:flex; justify-content:space-between; align-items:flex-end; }
+    .title { font-size: 26px; font-weight: 800; }
+    .subtitle { color:#666; margin-top:6px; }
+
+    .grid { display:grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-top: 14px; }
+    .card {
+  background: #ECDFD2;          /* warm beige */
+  border: 1px solid #CCCACC;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 6px 20px rgba(8,24,73,.25);
+}
+
+    .span2 { grid-column: span 2; }
+    .span3 { grid-column: span 3; }
+    .span6 { grid-column: span 6; }
+
+    .label {
+  color: #5F3475;               /* plum */
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+    .value {
+  font-size: 22px;
+  font-weight: 900;
+  color: #213885;               /* royal blue */
+}
+
+    .mono { font-family: Consolas, monospace; }
+
+    .pill { display:inline-block; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .pill-low { background:#e9f7ef; color:#1e7e34; }
+    .pill-med { background:#fff3cd; color:#856404; }
+    .pill-high { background:#f8d7da; color:#721c24; }
+
+    .row { display:flex; gap: 14px; flex-wrap: wrap; }
+    .deviceBox { display:flex; align-items:center; gap: 12px; }
+    .deviceIcon { width:44px; height:44px; border-radius: 12px; display:flex; align-items:center; justify-content:center; background:#eef2ff; font-size: 22px; }
+    .bigText { font-size: 14px; line-height: 1.5; color:#222; }
+
+    .warnBox { background:#fff3cd; border:1px solid #ffeeba; }
+    .riskBox { background:#eef8ff; border:1px solid #d8efff; }
+
+    canvas { max-height: 220px; }
+    .muted { color:#666; font-size: 13px; }
+
+    /* Status button */
+.statusBtn{
+  border:0;
+  cursor:pointer;
+  padding:8px 12px;
+  border-radius:999px;
+  font-weight:800;
+  font-size:12px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.statusBtn.compliant {
+  background:#213885;
+  color:#ECDFD2;
+}
+
+.statusBtn.noncompliant {
+  background:#893172;
+  color:#fff;
+}
+
+.statusBtn:focus{ outline:2px solid rgba(0,0,0,.15); outline-offset:2px; }
+
+/* Modal */
+.modalOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.45);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  z-index:9999;
+}
+.modalOverlay.open{ display:flex; }
+.modal{
+  width:min(920px, 96vw);
+  max-height:80vh;
+  overflow:auto;
+  background:#fff;
+  border:1px solid #e8e8ee;
+  border-radius:16px;
+  box-shadow:0 12px 40px rgba(0,0,0,.2);
+  padding:16px;
+}
+.modalHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  border-bottom:1px solid #eee;
+  padding-bottom:10px;
+  margin-bottom:12px;
+}
+.modalTitle{
+  font-weight:900;
+  font-size:16px;
+}
+.modalMeta{ color:#666; font-size:13px; margin-top:4px; }
+.modalClose{
+  border:0;
+  background:#f3f4f6;
+  padding:8px 10px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:800;
+}
+.modalBody{
+  font-size:14px;
+  line-height:1.5;
+  white-space:pre-wrap;
+}
+
+.hero {
+  text-align: center;
+  margin: 40px 0 30px;
+}
+
+.hero-title {
+  font-size: 100px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #ECDFD2;               /* beige on dark */
+  font-family: Optima, "Optima LT Std", serif;
+}
+
+
+.hero-subtitle {
+  margin-top: 10px;
+  font-size: 20px;
+  color: #CCCACC;
+  font-weight: 500;
+}
+
+.hero-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.hero-logo {
+  width: 110px;
+  height: auto;
+}
+
+.hero-title {
+  font-size: 100px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-family: Optima, "Optima LT Std", "Segoe UI", Arial, sans-serif;
+}
+
+.hero-subtitle {
+  margin-top: 6px;
+  font-size: 18px;
+  color: #E6E6E6;
+  text-align: left;
+}
+
+.heroBar{
+  display:flex;
+  justify-content:center;
+  padding:40px 60px;
+  background:#081849;
+}
+
+.heroText{
+  text-align:center;
+}
+
+.heroTitleRow{
+  display:flex;
+  align-items:center;
+  gap:24px;              /* space between IQ and logo */
+  justify-content:center;
+}
+
+.heroTitle{
+  font-family: Optima, "Optima LT Std", "Segoe UI", Arial, sans-serif;
+  font-size:100px;
+  font-weight:900;
+  color:#ECDFD2;
+  letter-spacing:3px;
+}
+
+.heroSub{
+  margin-top:12px;
+  font-size:30px;
+  color:#CCCACC;
+}
+
+.heroLogo{
+  width:90px;
+  height:90px;
+  border-radius:50%;
+  object-fit:cover;
+  background:#5F3475;
+  padding:10px;
+  box-shadow:0 0 20px rgba(236,223,210,.35);
+}
+.footer {
+  margin-top: 80px;                 /* SPACE FROM CONTENT */
+  padding: 30px 20px;
+  background: #081849;              /* deep lapis blue */
+  color: #ECDFD2;                   /* soft beige */
+  text-align: center;
+  border-top: 2px solid #213885;
+}
+
+.footer-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.footer-note {
+  font-size: 14px;
+  line-height: 1.6;
+  opacity: 0.95;
+}
+
+.footer-author {
+  margin-top: 14px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.footer-contact {
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.footer a {
+  color: #ECDFD2;
+  text-decoration: underline;
+}
+
+.footer a:hover {
+  color: #ffffff;
+}
+
+
+  </style>
+</head>
+
+<body>
+  <div class="hero">
+    <div class="hero-container">
+
+      <div class="heroBar">
+        <div class="heroText">
+          <div class="heroTitleRow">
+            <div class="heroTitle">ENDPOINT-IQ</div>
+            <img src="{{ url_for('static', filename='logo.png') }}" class="heroLogo" alt="Logo">
+          </div>
+      
+          <div class="heroSub">
+            "One-Stop shop for Monitoring the health of your digital systems."
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+    <div class="muted">Generated from local endpoint scan</div>
+
+  <!-- Top KPIs -->
+  <div class="grid">
+    <div class="card span2">
+      <div class="label">Device</div>
+      <div class="deviceBox" style="margin-top:8px;">
+        <div class="deviceIcon">{{ device_icon }}</div>
+        <div>
+          <div class="value mono" style="margin:0;">{{ data.device_name }}</div>
+          <div class="muted">User: {{ data.username }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card span2">
+      <div class="label">Risk Score</div>
+      <div class="value">{{ data.risk_score }}</div>
+      <div class="muted">0–19 Low • 20–39 Medium • 40+ High</div>
+    </div>
+
+    <div class="card span2">
+      <div class="label">Risk Score</div>
+      <div class="value">{{ data.risk_score }}</div>
+    
+      <!-- Risk scale bar -->
+      <div style="margin-top:10px;">
+        <div style="height:10px; border-radius:999px; overflow:hidden; display:flex;">
+          <div style="flex:19; background:#2ecc71;"></div>  <!-- 0-19 -->
+          <div style="flex:20; background:#f1c40f;"></div>  <!-- 20-39 -->
+          <div style="flex:61; background:#e74c3c;"></div>  <!-- 40-100 -->
+        </div>
+    
+        <!-- marker -->
+        <div style="position:relative; height:18px; margin-top:6px;">
+          <div style="position:absolute; left: calc({{ score_pct }}% - 6px); top:0; width:12px; height:12px; border-radius:50%; background:#111; border:2px solid #fff;"></div>
+          <div class="muted" style="margin-top:14px;">Green: Low • Yellow: Medium • Red: High</div>
+        </div>
+      </div>
+    </div>
+    
+
+    <div class="card span3">
+      <div class="label">Risk Breakdown</div>
+      <canvas id="riskDonut"></canvas>
+      <div class="muted">Shows how your score is distributed by category.</div>
+    </div>
+
+    <div class="card span3">
+      <div class="label">Health Snapshot</div>
+      <canvas id="healthBar"></canvas>
+      <div class="muted">Key health metrics at-a-glance.</div>
+    </div>
+
+    <div class="card span6 warnBox">
+      <div class="label">Recommendation</div>
+      <div class="bigText" style="margin-top:8px;"><b>{{ data.remediation_summary }}</b></div>
+    </div>
+    </div>
+
+
+  <script>
+    const donutValues = {{ donut_values | tojson }};
+    const barLabels = {{ bar_labels | tojson }};
+    const barScores = {{ bar_scores | tojson }};
+  
+    // DONUT: category RISK (higher = worse)
+    const donutEl = document.getElementById("riskDonut");
+    if (donutEl) {
+      new Chart(donutEl, {
+        type: "doughnut",
+        data: {
+          labels: ["Security Risk", "Patching Risk", "Performance Risk", "Device Health Risk"],
+          datasets: [{
+            data: donutValues,
+            backgroundColor: [
+  "#893172", // High risk (plum)
+  "#5F3475", // Medium risk (purple)
+  "#213885", // Low risk (royal blue)
+  "#081849"  // Base / residual (deep navy)
+],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          plugins: { legend: { position: "bottom" } },
+          cutout: "65%"
+        }
+      });
+    }
+  
+    // BAR: category SCORES (higher = better)
+    const barEl = document.getElementById("healthBar");
+    if (barEl) {
+      new Chart(barEl, {
+        type: "bar",
+        data: {
+          labels: barLabels,
+          datasets: [{
+            label: "Score (0-100)",
+            data: barScores,
+            backgroundColor: [
+  "#213885", // Disk health
+  "#5F3475", // Patch posture
+  "#893172", // Performance
+  "#081849"  // Device baseline
+]
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, max: 100 } }
+        }
+      });
+    }
+  </script>
+  <div class="card span6">
+    <div class="label">Endpoint Results</div>
+    <div style="overflow:auto; margin-top:12px;">
+      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+          <tr style="text-align:left; border-bottom:2px solid #e8e8ee;">
+            <th style="padding:10px;">Feature</th>
+            <th style="padding:10px;">Value</th> 
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in results_rows %}
+          <tr style="border-bottom:1px solid #f0f0f5;">
+            <td style="padding:10px;">{{ r.feature }}</td>
+            <td style="padding:10px;" class="mono">{{ r.value }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>        
+      </table>
+    </div>
+  </div>
+  <div class="card span6">
+    <div class="label">NIST SP 800-53 Compliance Mapping (All Checks)</div>
+    <div style="overflow:auto; margin-top:12px;">
+      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+          <tr style="text-align:left; border-bottom:2px solid #e8e8ee;">
+            <th style="padding:10px;">Control</th>
+            <th style="padding:10px;">Title</th>
+            <th style="padding:10px;">Mapped Check</th>
+            <th style="padding:10px;">Evidence</th>
+            <th style="padding:10px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in nist_rows %}
+          <tr style="border-bottom:1px solid #f0f0f5; vertical-align:top;">
+            <td style="padding:10px; font-weight:800;" class="mono">{{ c.control_id }}</td>
+            <td style="padding:10px;">{{ c.title }}</td>
+            <td style="padding:10px;">{{ c.check }}</td>
+            <td style="padding:10px;" class="mono">{{ c.evidence }}</td>
+            <td style="padding:10px;">
+              <button
+                type="button"
+                class="statusBtn {% if c.status == 'Compliant' %}compliant{% else %}noncompliant{% endif %}"
+                data-control="{{ c.control_id }}"
+                data-title="{{ c.title | e }}"
+                data-check="{{ c.check | e }}"
+                data-evidence="{{ c.evidence | e }}"
+                data-text="{{ c.text | e }}"
+              >
+                {% if c.status == "Compliant" %}COMPLIANT{% else %}NOT COMPLIANT{% endif %}
+                <span style="opacity:.8;">↗</span>
+              </button>
+            </td>
+            
+            
+            
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div id="nistModalOverlay" class="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="nistModalTitle">
+    <div class="modal">
+      <div class="modalHeader">
+        <div>
+          <div id="nistModalTitle" class="modalTitle"></div>
+          <div id="nistModalMeta" class="modalMeta"></div>
+        </div>
+        <button id="nistModalClose" class="modalClose" type="button">Close ✕</button>
+      </div>
+      <div id="nistModalBody" class="modalBody"></div>
+    </div>
+  </div>
+  <script>
+    const overlay = document.getElementById("nistModalOverlay");
+    const closeBtn = document.getElementById("nistModalClose");
+    const titleEl = document.getElementById("nistModalTitle");
+    const metaEl  = document.getElementById("nistModalMeta");
+    const bodyEl  = document.getElementById("nistModalBody");
+  
+    function openModal(btn){
+      const control = btn.getAttribute("data-control") || "";
+      const title = btn.getAttribute("data-title") || "";
+      const check = btn.getAttribute("data-check") || "";
+      const evidence = btn.getAttribute("data-evidence") || "";
+      const text = btn.getAttribute("data-text") || "";
+  
+      titleEl.textContent = `${control} — ${title}`;
+      metaEl.textContent = `Mapped Check: ${check} | Evidence: ${evidence}`;
+      bodyEl.textContent = text;
+  
+      overlay.classList.add("open");
+      closeBtn.focus();
+    }
+  
+    function closeModal(){
+      overlay.classList.remove("open");
+    }
+  
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".statusBtn");
+      if (btn) openModal(btn);
+  
+      // click outside modal closes
+      if (e.target === overlay) closeModal();
+    });
+  
+    closeBtn.addEventListener("click", closeModal);
+  
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && overlay.classList.contains("open")) closeModal();
+    });
+  </script>
+  <footer class="footer">
+    <div class="footer-content">
+      <p class="footer-note">
+        This project is developed strictly for <strong>educational and research purposes</strong>.
+        It is not intended for production use or real-world security enforcement. For any queries, please contact me at the email below.
+      </p>
+  
+      
+  
+      <p class="footer-contact">
+        Contact: <a href="mailto:akanksharaghvesh23@gmail.com">
+          akanksharaghvesh23@gmail.com
+        </a>
+      </p>
+    </div>
+  </footer>
+  
+</body>
+</html>
